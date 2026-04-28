@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="topbar">
+        <h1>Finance Dashboard</h1>
+        <a class="btn btn-secondary" href="{{ url_for('logout') }}">Log out</a>
+    </div>
+
+    <div class="cards">
+        <div class="card income">
+            <h3>Total Income</h3>
+            <p>Rs {{ total_income }}</p>
+        </div>
+        <div class="card expense">
+            <h3>Total Expense</h3>
+            <p>Rs {{ total_expense }}</p>
+        </div>
+        <div class="card balance">
+            <h3>Savings</h3>
+            <p>Rs {{ savings }}</p>
+        </div>
+    </div>
+
+    <div class="dashboard-layout">
+        <div class="transactions">
+            <h2>Transactions</h2>
+            <form method="POST" action="/add" class="add-form">
+                <input type="date" name="date" required>
+                <select name="category">
+                    <option>Food</option>
+                    <option>Travel</option>
+                    <option>Rent</option>
+                    <option>Entertainment</option>
+                    <option>Other</option>
+                </select>
+                <input type="number" step="0.01" name="amount" placeholder="Amount" required>
+                <select name="type">
+                    <option value="income">Income</option>
+                    <option value="expense">Expense</option>
+                </select>
+                <button type="submit">Add</button>
+            </form>
+
+            <table class="styled-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Category</th>
+                        <th>Amount</th>
+                        <th>Type</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in transactions %}
+                    <tr>
+                        <td>{{ t[1] }}</td>
+                        <td>{{ t[2] }}</td>
+                        <td>Rs {{ t[3] }}</td>
+                        <td>{{ t[4] }}</td>
+                        <td><button onclick="confirmDelete({{ t[0] }})">Delete</button></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="chart">
+            <h2>Income vs Expense</h2>
+            <button onclick="toggleChart()">Switch View</button>
+            <canvas id="financeChart"></canvas>
+
+            <h2>Income, Expense and Savings</h2>
+            <canvas id="pieChart"></canvas>
+        </div>
+    </div>
+
+    <div id="modalOverlay" class="modal-overlay hidden">
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+            <h2 id="modalTitle">Notice</h2>
+            <p id="modalMessage"></p>
+            <div class="modal-actions">
+                <button id="modalCancel" class="modal-button secondary" type="button">Cancel</button>
+                <button id="modalConfirm" class="modal-button primary" type="button">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const totalIncome = {{ total_income }};
+        const totalExpense = {{ total_expense }};
+        const savings = {{ savings }};
+        const monthlyData = {{ monthly_data|tojson }};
+        const modalOverlay = document.getElementById("modalOverlay");
+        const modalTitle = document.getElementById("modalTitle");
+        const modalMessage = document.getElementById("modalMessage");
+        const modalCancel = document.getElementById("modalCancel");
+        const modalConfirm = document.getElementById("modalConfirm");
+        let pendingAction = null;
+
+        function hideModal() {
+            modalOverlay.classList.add("hidden");
+            pendingAction = null;
+        }
+
+        function showModal({ title, message, confirmText = "OK", cancelText = "Cancel", onConfirm = null, hideCancel = false }) {
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+            modalConfirm.textContent = confirmText;
+            modalCancel.textContent = cancelText;
+            modalCancel.style.display = hideCancel ? "none" : "inline-flex";
+            pendingAction = onConfirm;
+            modalOverlay.classList.remove("hidden");
+        }
+
+        modalConfirm.addEventListener("click", () => {
+            const action = pendingAction;
+            hideModal();
+            if (action) {
+                action();
+            }
+        });
+
+        modalCancel.addEventListener("click", hideModal);
+        modalOverlay.addEventListener("click", (event) => {
+            if (event.target === modalOverlay) {
+                hideModal();
+            }
+        });
+
+        if (totalIncome > 0 && totalExpense >= 0.9 * totalIncome) {
+            showModal({
+                title: "Spending Warning",
+                message: "You have used up 90% of your income in expenses.",
+                confirmText: "Got it",
+                hideCancel: true
+            });
+        }
+
+        let chartMode = "total";
+        const ctx = document.getElementById("financeChart").getContext("2d");
+        let financeChart = new Chart(ctx, {
+            type: "bar",
+            data: {
+                labels: ["Income", "Expense"],
+                datasets: [{
+                    data: [totalIncome, totalExpense],
+                    backgroundColor: ["#4CAF50", "#F44336"]
+                }]
+            },
+            options: { responsive: true }
+        });
+
+        const pieCtx = document.getElementById("pieChart").getContext("2d");
+        new Chart(pieCtx, {
+            type: "pie",
+            data: {
+                labels: ["Income", "Expense", "Savings"],
+                datasets: [{
+                    data: [totalIncome, totalExpense, savings],
+                    backgroundColor: ["#4CAF50", "#F44336", "#2196F3"]
+                }]
+            },
+            options: { responsive: true }
+        });
+
+        function toggleChart() {
+            if (chartMode === "total") {
+                const months = monthlyData.map(row => row[0]);
+                const incomes = monthlyData.map(row => row[1]);
+                const expenses = monthlyData.map(row => row[2]);
+
+                financeChart.destroy();
+                financeChart = new Chart(ctx, {
+                    type: "bar",
+                    data: {
+                        labels: months,
+                        datasets: [
+                            {
+                                label: "Income",
+                                data: incomes,
+                                backgroundColor: "#4CAF50"
+                            },
+                            {
+                                label: "Expense",
+                                data: expenses,
+                                backgroundColor: "#F44336"
+                            }
+                        ]
+                    },
+                    options: { responsive: true }
+                });
+                chartMode = "monthly";
+            } else {
+                financeChart.destroy();
+                financeChart = new Chart(ctx, {
+                    type: "bar",
+                    data: {
+                        labels: ["Income", "Expense"],
+                        datasets: [{
+                            data: [totalIncome, totalExpense],
+                            backgroundColor: ["#4CAF50", "#F44336"]
+                        }]
+                    },
+                    options: { responsive: true }
+                });
+                chartMode = "total";
+            }
+        }
+
+        function confirmDelete(id) {
+            showModal({
+                title: "Delete Transaction",
+                message: "Are you sure you want to delete this transaction?",
+                confirmText: "Delete",
+                cancelText: "Keep",
+                onConfirm: () => {
+                    window.location.href = "/delete/" + id;
+                }
+            });
+        }
+    </script>
+</body>
+</html>

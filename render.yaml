@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: finance-tracker
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: FINANCE_TRACKER_SECRET_KEY
+        generateValue: true
+      - key: FINANCE_TRACKER_USERNAME
+        value: admin
+      - key: FINANCE_TRACKER_PASSWORD
+        value: admin123
