@@ -1,25 +1,45 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Finance Tracker</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body class="home">
-    <div class="auth-panel">
-        <h1>Welcome to Finance Tracker</h1>
-        <p>Enter your credentials to unlock the dashboard.</p>
-
+{% extends "base.html" %}
+{% block title %}Finance Tracker Login{% endblock %}
+{% block body_class %}home{% endblock %}
+{% block body %}
+<main class="auth-shell">
+    <section class="auth-hero">
+        <p class="eyebrow">Finance Tracker</p>
+        <h1>See your money with more calm and more clarity.</h1>
+        <p class="hero-copy">Track spending, manage goals, plan bills, and review your financial health from one focused dashboard.</p>
+        <div class="hero-stat-grid">
+            <article class="hero-stat">
+                <span>Budgets</span>
+                <strong>Monthly controls</strong>
+            </article>
+            <article class="hero-stat">
+                <span>Bills</span>
+                <strong>Upcoming reminders</strong>
+            </article>
+            <article class="hero-stat">
+                <span>Insights</span>
+                <strong>Smarter recommendations</strong>
+            </article>
+        </div>
+    </section>
+    <section class="auth-panel">
+        <p class="panel-kicker">Welcome back</p>
+        <h2>Unlock your finance dashboard</h2>
+        <p class="panel-copy">Use your credentials to access transactions, budgets, bills, goals, and investments.</p>
         {% if error %}
         <p class="error-message">{{ error }}</p>
         {% endif %}
-
         <form method="POST" action="{{ url_for('login') }}" class="login-form">
-            <input type="text" name="username" placeholder="Username" required>
-            <input type="password" name="password" placeholder="Password" required>
-            <button class="btn" type="submit">Unlock</button>
+            <label>
+                <span>Username</span>
+                <input type="text" name="username" placeholder="Enter username" required>
+            </label>
+            <label>
+                <span>Password</span>
+                <input type="password" name="password" placeholder="Enter password" required>
+            </label>
+            <button class="btn btn-primary" type="submit">Open Dashboard</button>
         </form>
-
-       
-    </div>
-</body>
-</html>
+    </section>
+</main>
+{% endblock %}
