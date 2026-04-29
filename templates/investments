@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Investments | Finance Tracker{% endblock %}
+
+{% block body %}
+<main class="app-layout">
+    <aside class="sidebar">
+        <div>
+            <p class="brand-mark">FINFLOW</p>
+            <p class="sidebar-subtitle">Finance control center</p>
+        </div>
+        <nav class="sidebar-nav">
+            {% for item in navigation %}
+            <a href="{{ url_for(item.endpoint) }}" class="nav-link {% if active_page == item.endpoint %}active{% endif %}">{{ item.label }}</a>
+            {% endfor %}
+        </nav>
+        <section class="sidebar-card">
+            <p class="sidebar-card-label">Portfolio Items</p>
+            <strong>{{ investments|length }}</strong>
+            <p>Monitor current value and compare against cost basis.</p>
+        </section>
+    </aside>
+
+    <section class="content-shell">
+        <header class="page-header">
+            <div>
+                <p class="eyebrow">Investments Module</p>
+                <h1>Investments</h1>
+                <p class="page-copy">Keep a simple portfolio register alongside the rest of your finances.</p>
+            </div>
+            <div class="header-actions">
+                <a class="btn btn-ghost" href="{{ url_for('logout') }}">Log out</a>
+            </div>
+        </header>
+
+        <section class="module-grid">
+            <article class="panel">
+                <div class="panel-header">
+                    <div>
+                        <h2>Add Investment</h2>
+                        <p>Store the asset type, current value, and cost basis.</p>
+                    </div>
+                </div>
+                <form method="POST" action="{{ url_for('add_investment') }}" class="finance-form">
+                    <label>
+                        <span>Name</span>
+                        <input type="text" name="name" placeholder="Nifty 50 ETF" required>
+                    </label>
+                    <label>
+                        <span>Asset Type</span>
+                        <input type="text" name="asset_type" placeholder="ETF, Stock, Mutual Fund" required>
+                    </label>
+                    <label>
+                        <span>Current Value</span>
+                        <input type="number" step="0.01" name="current_value" placeholder="0.00" required>
+                    </label>
+                    <label>
+                        <span>Cost Basis</span>
+                        <input type="number" step="0.01" name="cost_basis" placeholder="0.00" required>
+                    </label>
+                    <button type="submit" class="btn btn-primary">Save Investment</button>
+                </form>
+            </article>
+
+            <article class="panel panel-wide">
+                <div class="panel-header">
+                    <div>
+                        <h2>Portfolio Snapshot</h2>
+                        <p>Quick comparison of current value versus purchase cost.</p>
+                    </div>
+                </div>
+                <div class="table-wrap">
+                    <table class="styled-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Current Value</th>
+                                <th>Cost Basis</th>
+                                <th>Gain / Loss</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for investment in investments %}
+                            <tr>
+                                <td>{{ investment.name }}</td>
+                                <td><span class="tag">{{ investment.asset_type }}</span></td>
+                                <td>Rs {{ "%.2f"|format(investment.current_value) }}</td>
+                                <td>Rs {{ "%.2f"|format(investment.cost_basis) }}</td>
+                                <td class="{{ 'text-income' if investment.change >= 0 else 'text-expense' }}">
+                                    Rs {{ "%.2f"|format(investment.change) }} ({{ investment.change_pct }}%)
+                                </td>
+                                <td><a class="table-action" href="{{ url_for('delete_item', entity='investment', item_id=investment.id) }}">Delete</a></td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="empty-cell">No investments added yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+        </section>
+    </section>
+</main>
+{% endblock %}
