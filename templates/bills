@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}Bills | Finance Tracker{% endblock %}
+
+{% block body %}
+<main class="app-layout">
+    <aside class="sidebar">
+        <div>
+            <p class="brand-mark">FINFLOW</p>
+            <p class="sidebar-subtitle">Finance control center</p>
+        </div>
+        <nav class="sidebar-nav">
+            {% for item in navigation %}
+            <a href="{{ url_for(item.endpoint) }}" class="nav-link {% if active_page == item.endpoint %}active{% endif %}">{{ item.label }}</a>
+            {% endfor %}
+        </nav>
+        <section class="sidebar-card">
+            <p class="sidebar-card-label">Bills Due Soon</p>
+            <strong>{{ upcoming_bills_count }}</strong>
+            <p>Upcoming unpaid bills due within the next week.</p>
+        </section>
+    </aside>
+
+    <section class="content-shell">
+        <header class="page-header">
+            <div>
+                <p class="eyebrow">Bills Module</p>
+                <h1>Bills</h1>
+                <p class="page-copy">Track upcoming due dates and keep recurring obligations visible.</p>
+            </div>
+            <div class="header-actions">
+                <a class="btn btn-ghost" href="{{ url_for('logout') }}">Log out</a>
+            </div>
+        </header>
+
+        <section class="module-grid">
+            <article class="panel">
+                <div class="panel-header">
+                    <div>
+                        <h2>Add Bill</h2>
+                        <p>Store the amount, due date, and payment status.</p>
+                    </div>
+                </div>
+                <form method="POST" action="{{ url_for('add_bill') }}" class="finance-form">
+                    <label>
+                        <span>Title</span>
+                        <input type="text" name="title" placeholder="Internet Subscription" required>
+                    </label>
+                    <label>
+                        <span>Amount</span>
+                        <input type="number" step="0.01" name="amount" placeholder="0.00" required>
+                    </label>
+                    <label>
+                        <span>Due Date</span>
+                        <input type="date" name="due_date" required>
+                    </label>
+                    <label>
+                        <span>Status</span>
+                        <select name="status">
+                            <option value="upcoming">Upcoming</option>
+                            <option value="paid">Paid</option>
+                        </select>
+                    </label>
+                    <button type="submit" class="btn btn-primary">Save Bill</button>
+                </form>
+            </article>
+
+            <article class="panel panel-wide">
+                <div class="panel-header">
+                    <div>
+                        <h2>Bill Timeline</h2>
+                        <p>Stay ahead of due dates with a simple reminder list.</p>
+                    </div>
+                </div>
+                <div class="table-wrap">
+                    <table class="styled-table">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Amount</th>
+                                <th>Due Date</th>
+                                <th>Status</th>
+                                <th>Due In</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for bill in bills %}
+                            <tr>
+                                <td>{{ bill.title }}</td>
+                                <td>Rs {{ "%.2f"|format(bill.amount) }}</td>
+                                <td>{{ bill.due_date }}</td>
+                                <td><span class="tag">{{ bill.status|capitalize }}</span></td>
+                                <td>
+                                    {% if bill.days_until is not none %}
+                                        {{ bill.days_until }} day(s)
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td><a class="table-action" href="{{ url_for('delete_item', entity='bill', item_id=bill.id) }}">Delete</a></td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="empty-cell">No bills added yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+        </section>
+    </section>
+</main>
+{% endblock %}
