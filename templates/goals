@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Goals | Finance Tracker{% endblock %}
+
+{% block body %}
+<main class="app-layout">
+    <aside class="sidebar">
+        <div>
+            <p class="brand-mark">FINFLOW</p>
+            <p class="sidebar-subtitle">Finance control center</p>
+        </div>
+        <nav class="sidebar-nav">
+            {% for item in navigation %}
+            <a href="{{ url_for(item.endpoint) }}" class="nav-link {% if active_page == item.endpoint %}active{% endif %}">{{ item.label }}</a>
+            {% endfor %}
+        </nav>
+        <section class="sidebar-card">
+            <p class="sidebar-card-label">Active Goals</p>
+            <strong>{{ goals|length }}</strong>
+            <p>Track your targets and visualize progress over time.</p>
+        </section>
+    </aside>
+
+    <section class="content-shell">
+        <header class="page-header">
+            <div>
+                <p class="eyebrow">Goals Module</p>
+                <h1>Goals</h1>
+                <p class="page-copy">Turn savings targets into visible milestones with progress tracking.</p>
+            </div>
+            <div class="header-actions">
+                <a class="btn btn-ghost" href="{{ url_for('logout') }}">Log out</a>
+            </div>
+        </header>
+
+        <section class="module-grid">
+            <article class="panel">
+                <div class="panel-header">
+                    <div>
+                        <h2>Add Goal</h2>
+                        <p>Create a target and track the current amount saved.</p>
+                    </div>
+                </div>
+                <form method="POST" action="{{ url_for('add_goal') }}" class="finance-form">
+                    <label>
+                        <span>Goal Name</span>
+                        <input type="text" name="name" placeholder="Emergency Fund" required>
+                    </label>
+                    <label>
+                        <span>Target Amount</span>
+                        <input type="number" step="0.01" name="target_amount" placeholder="0.00" required>
+                    </label>
+                    <label>
+                        <span>Current Amount</span>
+                        <input type="number" step="0.01" name="current_amount" placeholder="0.00" required>
+                    </label>
+                    <button type="submit" class="btn btn-primary">Save Goal</button>
+                </form>
+            </article>
+
+            <article class="panel panel-wide">
+                <div class="panel-header">
+                    <div>
+                        <h2>Goal Progress</h2>
+                        <p>See which targets are advancing and which need more attention.</p>
+                    </div>
+                </div>
+                <div class="budget-stack">
+                    {% for goal in goals %}
+                    <div class="budget-item">
+                        <div class="budget-head">
+                            <div>
+                                <strong>{{ goal.name }}</strong>
+                                <p>Rs {{ "%.2f"|format(goal.current_amount) }} of Rs {{ "%.2f"|format(goal.target_amount) }}</p>
+                            </div>
+                            <span class="tag">{{ goal.progress }}%</span>
+                        </div>
+                        <div class="progress-track">
+                            <div class="progress-fill" style="width: {{ [goal.progress, 100]|min }}%;"></div>
+                        </div>
+                        <div class="budget-foot">
+                            <span>{% if goal.progress >= 100 %}Completed{% else %}In progress{% endif %}</span>
+                            <a class="table-action" href="{{ url_for('delete_item', entity='goal', item_id=goal.id) }}">Delete</a>
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="empty-state">No goals added yet.</p>
+                    {% endfor %}
+                </div>
+            </article>
+        </section>
+    </section>
+</main>
+{% endblock %}
