@@ -164,7 +164,8 @@ a {
 
 .login-form input,
 .finance-form input,
-.finance-form select {
+.finance-form select,
+.inline-filter input {
   width: 100%;
   border: 1px solid var(--border);
   border-radius: 16px;
@@ -176,7 +177,8 @@ a {
 
 .login-form input:focus,
 .finance-form input:focus,
-.finance-form select:focus {
+.finance-form select:focus,
+.inline-filter input:focus {
   outline: 2px solid rgba(31, 138, 112, 0.16);
   border-color: var(--accent);
 }
@@ -288,6 +290,14 @@ a {
 .content-shell {
   display: grid;
   gap: 20px;
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px 6px;
 }
 
 .page-header {
@@ -433,6 +443,31 @@ a {
   align-items: end;
 }
 
+.finance-form-filters {
+  grid-template-columns: 1.2fr 1fr 0.8fr 0.9fr 0.9fr auto;
+  align-items: end;
+}
+
+.edit-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.edit-form button {
+  justify-self: start;
+}
+
+.inline-filter {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.inline-filter input {
+  min-width: 170px;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--text);
+}
+
 .finance-form button {
   min-height: 52px;
 }
@@ -471,6 +506,17 @@ a {
 .table-action {
   color: var(--danger);
   font-weight: 600;
+  display: inline-flex;
+  margin-right: 10px;
+  white-space: nowrap;
+}
+
+.table-action:last-child {
+  margin-right: 0;
+}
+
+.table-action-muted {
+  color: var(--accent);
 }
 
 .text-income {
@@ -541,6 +587,11 @@ canvas {
   .finance-form-wide {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .finance-form-filters,
+  .edit-form {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 @media (max-width: 760px) {
@@ -561,7 +612,9 @@ canvas {
   .hero-grid,
   .module-grid,
   .dashboard-grid,
-  .finance-form-wide {
+  .finance-form-wide,
+  .finance-form-filters,
+  .edit-form {
     grid-template-columns: 1fr;
   }
 
@@ -572,8 +625,14 @@ canvas {
     align-items: flex-start;
   }
 
+  .inline-filter {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
   .page-header h1,
   .auth-hero h1 {
-    font-size: 2.2rem;
+    font-size: 2.2rem
   }
 }
