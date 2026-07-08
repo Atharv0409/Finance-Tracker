@@ -131,8 +131,50 @@
             <article class="panel panel-wide">
                 <div class="panel-header">
                     <div>
+                        <h2>Find Transactions</h2>
+                        <p>Filter your ledger by text, category, type, or date range.</p>
+                    </div>
+                    <a class="table-action table-action-muted" href="{{ url_for('dashboard') }}">Clear filters</a>
+                </div>
+                <form method="GET" action="{{ url_for('dashboard') }}" class="finance-form finance-form-filters">
+                    <label>
+                        <span>Search</span>
+                        <input type="search" name="search" value="{{ filters.search }}" placeholder="Description or category">
+                    </label>
+                    <label>
+                        <span>Category</span>
+                        <select name="category">
+                            <option value="">All categories</option>
+                            {% for category in transaction_categories %}
+                            <option value="{{ category }}" {% if filters.category == category %}selected{% endif %}>{{ category }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label>
+                        <span>Type</span>
+                        <select name="type">
+                            <option value="">All types</option>
+                            <option value="income" {% if filters.type == "income" %}selected{% endif %}>Income</option>
+                            <option value="expense" {% if filters.type == "expense" %}selected{% endif %}>Expense</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span>From</span>
+                        <input type="date" name="start_date" value="{{ filters.start_date }}">
+                    </label>
+                    <label>
+                        <span>To</span>
+                        <input type="date" name="end_date" value="{{ filters.end_date }}">
+                    </label>
+                    <button type="submit" class="btn btn-primary">Apply Filters</button>
+                </form>
+            </article>
+
+            <article class="panel panel-wide">
+                <div class="panel-header">
+                    <div>
                         <h2>Recent Transactions</h2>
-                        <p>Smarter categorization with a cleaner transaction view.</p>
+                        <p>Smarter categorization with searchable transaction history.</p>
                     </div>
                 </div>
                 <div class="table-wrap">
@@ -156,6 +198,7 @@
                                 <td class="{{ 'text-income' if transaction.type == 'income' else 'text-expense' }}">{{ transaction.type|capitalize }}</td>
                                 <td>Rs {{ "%.2f"|format(transaction.amount or 0) }}</td>
                                 <td>
+                                    <a class="table-action table-action-muted" href="{{ url_for('edit_item', entity='transaction', item_id=transaction.id) }}">Edit</a>
                                     <a class="table-action" href="{{ url_for('delete_item', entity='transaction', item_id=transaction.id) }}">Delete</a>
                                 </td>
                             </tr>
@@ -262,6 +305,325 @@
                 }
             }
         });
+    }
+</script>
+{% endblock %}
+
+
+
+===== templates\budgets.html =====
+{% extends "base.html" %}
+
+{% block title %}Budgets | Finance Tracker{% endblock %}
+
+{% block body %}
+<main class="app-layout">
+    <aside class="sidebar">
+        <div>
+            <p class="brand-mark">FINFLOW</p>
+            <p class="sidebar-subtitle">Finance control center</p>
+        </div>
+        <nav class="sidebar-nav">
+            {% for item in navigation %}
+            <a href="{{ url_for(item.endpoint) }}" class="nav-link {% if active_page == item.endpoint %}active{% endif %}">{{ item.label }}</a>
+            {% endfor %}
+        </nav>
+        <section class="sidebar-card">
+            <p class="sidebar-card-label">Budget Coverage</p>
+            <strong>Rs {{ "%.2f"|format(monthly_budget_total) }}</strong>
+            <p>Total planned monthly budget across all categories.</p>
+        </section>
+    </aside>
+
+    <section class="content-shell">
+        <header class="page-header">
+            <div>
+                <p class="eyebrow">Budgets Module</p>
+                <h1>Budgets</h1>
+                <p class="page-copy">Plan monthly category caps and compare them against real expenses.</p>
+            </div>
+            <div class="header-actions">
+                <a class="btn btn-ghost" href="{{ url_for('logout') }}">Log out</a>
+            </div>
+        </header>
+
+        <section class="module-grid">
+            <article class="panel">
+                <div class="panel-header">
+                    <div>
+                        <h2>Create Budget</h2>
+                        <p>Add a category and monthly limit.</p>
+                    </div>
+                </div>
+                <form method="POST" action="{{ url_for('add_budget') }}" class="finance-form">
+                    <label>
+                        <span>Category Name</span>
+                        <input type="text" name="name" placeholder="Housing" required>
+                    </label>
+                    <label>
+                        <span>Monthly Limit</span>
+                        <input type="number" step="0.01" name="monthly_limit" placeholder="0.00" required>
+                    </label>
+                    <button type="submit" class="btn btn-primary">Save Budget</button>
+                </form>
+            </article>
+
+            <article class="panel panel-wide">
+                <div class="panel-header">
+                    <div>
+                        <h2>Budget Health</h2>
+                        <p>Live progress based on this month’s transactions.</p>
+                    </div>
+                </div>
+                <div class="budget-stack">
+                    {% for budget in budgets %}
+                    <div class="budget-item">
+                        <div class="budget-head">
+                            <div>
+                                <strong>{{ budget.name }}</strong>
+                                <p>Rs {{ "%.2f"|format(budget.spent) }} spent of Rs {{ "%.2f"|format(budget.monthly_limit) }}</p>
+                            </div>
+                            <span class="tag">{{ budget.usage }}%</span>
+                        </div>
+                        <div class="progress-track">
+                            <div class="progress-fill" style="width: {{ [budget.usage, 100]|min }}%;"></div>
+                        </div>
+                        <div class="budget-foot">
+                            <span>{{ budget.status }}</span>
+                            <a class="table-action table-action-muted" href="{{ url_for('edit_item', entity='budget', item_id=budget.id) }}">Edit</a>
+                            <a class="table-action" href="{{ url_for('delete_item', entity='budget', item_id=budget.id) }}">Delete</a>
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="empty-state">No budgets added yet.</p>
+                    {% endfor %}
+                </div>
+            </article>
+        </section>
+    </section>
+</main>
+{% endblock %}
+
+
+
+===== templates\bills.html =====
+{% extends "base.html" %}
+
+{% block title %}Bills | Finance Tracker{% endblock %}
+
+{% block body %}
+<main class="app-layout">
+    <aside class="sidebar">
+        <div>
+            <p class="brand-mark">FINFLOW</p>
+            <p class="sidebar-subtitle">Finance control center</p>
+        </div>
+        <nav class="sidebar-nav">
+            {% for item in navigation %}
+            <a href="{{ url_for(item.endpoint) }}" class="nav-link {% if active_page == item.endpoint %}active{% endif %}">{{ item.label }}</a>
+            {% endfor %}
+        </nav>
+        <section class="sidebar-card">
+            <p class="sidebar-card-label">Bills Due Soon</p>
+            <strong>{{ upcoming_bills_count }}</strong>
+            <p>Upcoming unpaid bills due within the next week.</p>
+        </section>
+    </aside>
+
+    <section class="content-shell">
+        <header class="page-header">
+            <div>
+                <p class="eyebrow">Bills Module</p>
+                <h1>Bills</h1>
+                <p class="page-copy">Track upcoming due dates and keep recurring obligations visible.</p>
+            </div>
+            <div class="header-actions">
+                <a class="btn btn-ghost" href="{{ url_for('logout') }}">Log out</a>
+            </div>
+        </header>
+
+        <section class="module-grid">
+            <article class="panel">
+                <div class="panel-header">
+                    <div>
+                        <h2>Add Bill</h2>
+                        <p>Store the amount, due date, and payment status.</p>
+                    </div>
+                </div>
+                <form method="POST" action="{{ url_for('add_bill') }}" class="finance-form">
+                    <label>
+                        <span>Title</span>
+                        <input type="text" name="title" placeholder="Internet Subscription" required>
+                    </label>
+                    <label>
+                        <span>Amount</span>
+                        <input type="number" step="0.01" name="amount" placeholder="0.00" required>
+                    </label>
+                    <label>
+                        <span>Due Date</span>
+                        <input type="date" name="due_date" required>
+                    </label>
+                    <label>
+                        <span>Status</span>
+                        <select name="status">
+                            <option value="upcoming">Upcoming</option>
+                            <option value="paid">Paid</option>
+                        </select>
+                    </label>
+                    <button type="submit" class="btn btn-primary">Save Bill</button>
+                </form>
+            </article>
+
+            <article class="panel panel-wide">
+                <div class="panel-header">
+                    <div>
+                        <h2>Bill Timeline</h2>
+                        <p>Stay ahead of due dates with a simple reminder list.</p>
+                    </div>
+                </div>
+                <div class="table-wrap">
+                    <table class="styled-table">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Amount</th>
+                                <th>Due Date</th>
+                                <th>Status</th>
+                                <th>Due In</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for bill in bills %}
+                            <tr>
+                                <td>{{ bill.title }}</td>
+                                <td>Rs {{ "%.2f"|format(bill.amount) }}</td>
+                                <td>{{ bill.due_date }}</td>
+                                <td><span class="tag">{{ bill.status|capitalize }}</span></td>
+                                <td>
+                                    {% if bill.days_until is not none %}
+                                        {{ bill.days_until }} day(s)
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a class="table-action table-action-muted" href="{{ url_for('edit_item', entity='bill', item_id=bill.id) }}">Edit</a>
+                                    <a class="table-action" href="{{ url_for('delete_item', entity='bill', item_id=bill.id) }}">Delete</a>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="empty-cell">No bills added yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+        </section>
+    </section>
+</main>
+{% endblock %}
+
+
+
+===== templates\goals.html =====
+{% extends "base.html" %}
+
+{% block title %}Goals | Finance Tracker{% endblock %}
+
+{% block body %}
+<main class="app-layout">
+    <aside class="sidebar">
+        <div>
+            <p class="brand-mark">FINFLOW</p>
+            <p class="sidebar-subtitle">Finance control center</p>
+        </div>
+        <nav class="sidebar-nav">
+            {% for item in navigation %}
+            <a href="{{ url_for(item.endpoint) }}" class="nav-link {% if active_page == item.endpoint %}active{% endif %}">{{ item.label }}</a>
+            {% endfor %}
+        </nav>
+        <section class="sidebar-card">
+            <p class="sidebar-card-label">Active Goals</p>
+            <strong>{{ goals|length }}</strong>
+            <p>Track your targets and visualize progress over time.</p>
+        </section>
+    </aside>
+
+    <section class="content-shell">
+        <header class="page-header">
+            <div>
+                <p class="eyebrow">Goals Module</p>
+                <h1>Goals</h1>
+                <p class="page-copy">Turn savings targets into visible milestones with progress tracking.</p>
+            </div>
+            <div class="header-actions">
+                <a class="btn btn-ghost" href="{{ url_for('logout') }}">Log out</a>
+            </div>
+        </header>
+
+        <section class="module-grid">
+            <article class="panel">
+                <div class="panel-header">
+                    <div>
+                        <h2>Add Goal</h2>
+                        <p>Create a target and track the current amount saved.</p>
+                    </div>
+                </div>
+                <form method="POST" action="{{ url_for('add_goal') }}" class="finance-form">
+                    <label>
+                        <span>Goal Name</span>
+                        <input type="text" name="name" placeholder="Emergency Fund" required>
+                    </label>
+                    <label>
+                        <span>Target Amount</span>
+                        <input type="number" step="0.01" name="target_amount" placeholder="0.00" required>
+                    </label>
+                    <label>
+                        <span>Current Amount</span>
+                        <input type="number" step="0.01" name="current_amount" placeholder="0.00" required>
+                    </label>
+                    <button type="submit" class="btn btn-primary">Save Goal</button>
+                </form>
+            </article>
+
+            <article class="panel panel-wide">
+                <div class="panel-header">
+                    <div>
+                        <h2>Goal Progress</h2>
+                        <p>See which targets are advancing and which need more attention.</p>
+                    </div>
+                </div>
+                <div class="budget-stack">
+                    {% for goal in goals %}
+                    <div class="budget-item">
+                        <div class="budget-head">
+                            <div>
+                                <strong>{{ goal.name }}</strong>
+                                <p>Rs {{ "%.2f"|format(goal.current_amount) }} of Rs {{ "%.2f"|format(goal.target_amount) }}</p>
+                            </div>
+                            <span class="tag">{{ goal.progress }}%</span>
+                        </div>
+                        <div class="progress-track">
+                            <div class="progress-fill" style="width: {{ [goal.progress, 100]|min }}%;"></div>
+                        </div>
+                        <div class="budget-foot">
+                            <span>{% if goal.progress >= 100 %}Completed{% else %}In progress{% endif %}</span>
+                            <a class="table-action table-action-muted" href="{{ url_for('edit_item', entity='goal', item_id=goal.id) }}">Edit</a>
+                            <a class="table-action" href="{{ url_for('delete_item', entity='goal', item_id=goal.id) }}">Delete</a>
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="empty-state">No goals added yet.</p>
+                    {% endfor %}
+                </div>
+            </article>
+        </section>
+    </section>
+</main>
+{% endblock %}
     }
 </script>
 {% endblock %}
