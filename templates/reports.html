@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}Reports | Finance Tracker{% endblock %}
+
+{% block body %}
+<main class="app-layout">
+    <aside class="sidebar">
+        <div>
+            <p class="brand-mark">FINFLOW</p>
+            <p class="sidebar-subtitle">Finance control center</p>
+        </div>
+        <nav class="sidebar-nav">
+            {% for item in navigation %}
+            <a href="{{ url_for(item.endpoint) }}" class="nav-link {% if active_page == item.endpoint %}active{% endif %}">{{ item.label }}</a>
+            {% endfor %}
+        </nav>
+        <section class="sidebar-card">
+            <p class="sidebar-card-label">Savings Rate</p>
+            <strong>{{ report_totals.savings_rate }}%</strong>
+            <p>Income kept after expenses for the selected month.</p>
+        </section>
+    </aside>
+
+    <section class="content-shell">
+        <header class="page-header">
+            <div>
+                <p class="eyebrow">Monthly Reports</p>
+                <h1>Reports</h1>
+                <p class="page-copy">Review income, expenses, savings, and category pressure for any month.</p>
+            </div>
+            <div class="header-actions">
+                <form method="GET" action="{{ url_for('reports') }}" class="inline-filter">
+                    <input type="month" name="month" value="{{ selected_month }}">
+                    <button type="submit" class="btn btn-primary">View Month</button>
+                </form>
+                <a class="btn btn-ghost" href="{{ url_for('logout') }}">Log out</a>
+            </div>
+        </header>
+
+        <section class="hero-grid">
+            <article class="metric-card">
+                <p>Monthly Income</p>
+                <h2>Rs {{ "%.2f"|format(report_totals.income) }}</h2>
+                <span>{{ report_totals.transaction_count }} transaction(s) this month</span>
+            </article>
+            <article class="metric-card">
+                <p>Monthly Expense</p>
+                <h2>Rs {{ "%.2f"|format(report_totals.expense) }}</h2>
+                <span>Total outgoing spend</span>
+            </article>
+            <article class="metric-card">
+                <p>Monthly Savings</p>
+                <h2>Rs {{ "%.2f"|format(report_totals.savings) }}</h2>
+                <span>Income minus expenses</span>
+            </article>
+            <article class="metric-card metric-card-dark">
+                <p>Savings Rate</p>
+                <h2>{{ report_totals.savings_rate }}%</h2>
+                <span>Share of income retained</span>
+            </article>
+        </section>
+
+        <section class="dashboard-grid">
+            <article class="panel">
+                <div class="panel-header">
+                    <div>
+                        <h2>Expense Categories</h2>
+                        <p>Where this month's spending went.</p>
+                    </div>
+                </div>
+                <canvas id="categoryReportChart"></canvas>
+            </article>
+
+            <article class="panel">
+                <div class="panel-header">
+                    <div>
+                        <h2>Category Totals</h2>
+                        <p>Ranked by amount spent.</p>
+                    </div>
+                </div>
+                <div class="summary-list">
+                    {% for item in category_report %}
+                    <div class="summary-row">
+                        <span>{{ item.category or "Other" }}</span>
+                        <strong>Rs {{ "%.2f"|format(item.total or 0) }}</strong>
+                    </div>
+                    {% else %}
+                    <p class="empty-state">No expense transactions found for this month.</p>
+                    {% endfor %}
+                </div>
+            </article>
+
+            <article class="panel panel-wide">
+                <div class="panel-header">
+                    <div>
+                        <h2>Recent Monthly Activity</h2>
+                        <p>The latest transactions from the selected month.</p>
+                    </div>
+                </div>
+                <div class="table-wrap">
+                    <table class="styled-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Category</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for transaction in report_transactions %}
+                            <tr>
+                                <td>{{ transaction.date }}</td>
+                                <td>{{ transaction.description or "-" }}</td>
+                                <td><span class="tag">{{ transaction.category or "Other" }}</span></td>
+                                <td class="{{ 'text-income' if transaction.type == 'income' else 'text-expense' }}">{{ transaction.type|capitalize }}</td>
+                                <td>Rs {{ "%.2f"|format(transaction.amount or 0) }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="empty-cell">No transactions found for this month.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+        </section>
+    </section>
+</main>
+
+<script>
+    const categoryReport = {{ category_report|tojson }};
+    const categoryContext = document.getElementById("categoryReportChart");
+
+    if (categoryContext) {
+        new Chart(categoryContext, {
+            type: "doughnut",
+            data: {
+                labels: categoryReport.map((row) => row.category || "Other"),
+                datasets: [
+                    {
+                        data: categoryReport.map((row) => row.total || 0),
+                        backgroundColor: ["#1f8a70", "#e27a3f", "#3858e9", "#83d1a8", "#c05648", "#173f35"],
+                        borderWidth: 0
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: "bottom",
+                        labels: {
+                            usePointStyle: true,
+                            boxWidth: 10
+                        }
+                    }
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}
