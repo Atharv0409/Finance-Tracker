@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}Edit {{ entity|capitalize }} | Finance Tracker{% endblock %}
+
+{% block body %}
+<main class="app-layout">
+    <aside class="sidebar">
+        <div>
+            <p class="brand-mark">FINFLOW</p>
+            <p class="sidebar-subtitle">Finance control center</p>
+        </div>
+        <nav class="sidebar-nav">
+            {% for nav_item in navigation %}
+            <a href="{{ url_for(nav_item.endpoint) }}" class="nav-link {% if active_page == nav_item.endpoint %}active{% endif %}">{{ nav_item.label }}</a>
+            {% endfor %}
+        </nav>
+        <section class="sidebar-card">
+            <p class="sidebar-card-label">Editing</p>
+            <strong>{{ entity|capitalize }}</strong>
+            <p>Update the saved record and return to its module.</p>
+        </section>
+    </aside>
+
+    <section class="content-shell">
+        <header class="page-header">
+            <div>
+                <p class="eyebrow">Edit Module</p>
+                <h1>Edit {{ entity|capitalize }}</h1>
+                <p class="page-copy">Adjust the saved details without deleting and recreating the item.</p>
+            </div>
+            <div class="header-actions">
+                <a class="btn btn-ghost" href="{{ url_for(active_page) }}">Cancel</a>
+                <a class="btn btn-ghost" href="{{ url_for('logout') }}">Log out</a>
+            </div>
+        </header>
+
+        <section class="module-grid">
+            <article class="panel panel-wide">
+                <div class="panel-header">
+                    <div>
+                        <h2>Saved Details</h2>
+                        <p>Make your changes and save the updated record.</p>
+                    </div>
+                </div>
+                <form method="POST" class="finance-form edit-form">
+                    {% if entity == "transaction" %}
+                    <label>
+                        <span>Date</span>
+                        <input type="date" name="date" value="{{ item.date }}" required>
+                    </label>
+                    <label>
+                        <span>Description</span>
+                        <input type="text" name="description" value="{{ item.description }}" required>
+                    </label>
+                    <label>
+                        <span>Category</span>
+                        <input type="text" name="category" value="{{ item.category }}" required>
+                    </label>
+                    <label>
+                        <span>Amount</span>
+                        <input type="number" step="0.01" name="amount" value="{{ item.amount }}" required>
+                    </label>
+                    <label>
+                        <span>Type</span>
+                        <select name="type">
+                            <option value="expense" {% if item.type == "expense" %}selected{% endif %}>Expense</option>
+                            <option value="income" {% if item.type == "income" %}selected{% endif %}>Income</option>
+                        </select>
+                    </label>
+                    {% elif entity == "budget" %}
+                    <label>
+                        <span>Category Name</span>
+                        <input type="text" name="name" value="{{ item.name }}" required>
+                    </label>
+                    <label>
+                        <span>Monthly Limit</span>
+                        <input type="number" step="0.01" name="monthly_limit" value="{{ item.monthly_limit }}" required>
+                    </label>
+                    {% elif entity == "bill" %}
+                    <label>
+                        <span>Title</span>
+                        <input type="text" name="title" value="{{ item.title }}" required>
+                    </label>
+                    <label>
+                        <span>Amount</span>
+                        <input type="number" step="0.01" name="amount" value="{{ item.amount }}" required>
+                    </label>
+                    <label>
+                        <span>Due Date</span>
+                        <input type="date" name="due_date" value="{{ item.due_date }}" required>
+                    </label>
+                    <label>
+                        <span>Status</span>
+                        <select name="status">
+                            <option value="upcoming" {% if item.status == "upcoming" %}selected{% endif %}>Upcoming</option>
+                            <option value="paid" {% if item.status == "paid" %}selected{% endif %}>Paid</option>
+                        </select>
+                    </label>
+                    {% elif entity == "goal" %}
+                    <label>
+                        <span>Goal Name</span>
+                        <input type="text" name="name" value="{{ item.name }}" required>
+                    </label>
+                    <label>
+                        <span>Target Amount</span>
+                        <input type="number" step="0.01" name="target_amount" value="{{ item.target_amount }}" required>
+                    </label>
+                    <label>
+                        <span>Current Amount</span>
+                        <input type="number" step="0.01" name="current_amount" value="{{ item.current_amount }}" required>
+                    </label>
+                    {% elif entity == "investment" %}
+                    <label>
+                        <span>Name</span>
+                        <input type="text" name="name" value="{{ item.name }}" required>
+                    </label>
+                    <label>
+                        <span>Asset Type</span>
+                        <input type="text" name="asset_type" value="{{ item.asset_type }}" required>
+                    </label>
+                    <label>
+                        <span>Current Value</span>
+                        <input type="number" step="0.01" name="current_value" value="{{ item.current_value }}" required>
+                    </label>
+                    <label>
+                        <span>Cost Basis</span>
+                        <input type="number" step="0.01" name="cost_basis" value="{{ item.cost_basis }}" required>
+                    </label>
+                    {% endif %}
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </form>
+            </article>
+        </section>
+    </section>
+</main>
+{% endblock %}
