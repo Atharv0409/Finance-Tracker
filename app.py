@@ -144,13 +144,53 @@ def get_navigation():
         {"endpoint": "bills", "label": "Bills"},
         {"endpoint": "goals", "label": "Goals"},
         {"endpoint": "investments", "label": "Investments"},
+        {"endpoint": "reports", "label": "Reports"},
     ]
-def get_finance_context():
+def get_finance_context(filters=None):
+    filters = filters or {}
     today = date.today()
     month_prefix = today.strftime("%Y-%m")
     upcoming_cutoff = (today + timedelta(days=7)).isoformat()
-    cursor.execute("SELECT * FROM transactions ORDER BY date DESC, id DESC")
+    transaction_clauses = []
+    transaction_params = []
+    search = filters.get("search", "").strip()
+    category_filter = filters.get("category", "").strip()
+    type_filter = filters.get("type", "").strip()
+    start_date = filters.get("start_date", "").strip()
+    end_date = filters.get("end_date", "").strip()
+
+    if search:
+        transaction_clauses.append("(description LIKE ? OR category LIKE ?)")
+        search_term = f"%{search}%"
+        transaction_params.extend([search_term, search_term])
+    if category_filter:
+        transaction_clauses.append("category=?")
+        transaction_params.append(category_filter)
+    if type_filter in {"income", "expense"}:
+        transaction_clauses.append("type=?")
+        transaction_params.append(type_filter)
+    if start_date:
+        transaction_clauses.append("date>=?")
+        transaction_params.append(start_date)
+    if end_date:
+        transaction_clauses.append("date<=?")
+        transaction_params.append(end_date)
+
+    transaction_query = "SELECT * FROM transactions"
+    if transaction_clauses:
+        transaction_query += " WHERE " + " AND ".join(transaction_clauses)
+    transaction_query += " ORDER BY date DESC, id DESC"
+    cursor.execute(transaction_query, transaction_params)
     transactions = cursor.fetchall()
+    cursor.execute(
+        """
+        SELECT DISTINCT category
+        FROM transactions
+        WHERE category IS NOT NULL AND category != ''
+        ORDER BY category ASC
+        """
+    )
+    transaction_categories = [row["category"] for row in cursor.fetchall()]
     cursor.execute("SELECT COALESCE(SUM(amount), 0) AS total FROM transactions WHERE type='income'")
     total_income = cursor.fetchone()["total"]
     cursor.execute("SELECT COALESCE(SUM(amount), 0) AS total FROM transactions WHERE type='expense'")
@@ -256,11 +296,13 @@ def get_finance_context():
     if profitable_investments:
         recommendations.append(f"{profitable_investments[0]['name']} is up {profitable_investments[0]['change_pct']}% from cost basis.")
     if not recommendations:
-        recommendations.append("Your finances look balanced right now. Keep logging transactions to maintain accurate insights.")
+                recommendations.append("Your finances look balanced right now. Keep logging transactions to maintain accurate insights.")
     return {
         "today": today.isoformat(),
         "current_month_label": today.strftime("%B %Y"),
         "transactions": transactions,
+        "transaction_categories": transaction_categories,
+        "filters": filters,
         "total_income": total_income,
         "total_expense": total_expense,
         "savings": savings,
@@ -304,7 +346,14 @@ def logout():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    context = get_finance_context()
+    filters = {
+        "search": request.args.get("search", ""),
+        "category": request.args.get("category", ""),
+        "type": request.args.get("type", ""),
+        "start_date": request.args.get("start_date", ""),
+        "end_date": request.args.get("end_date", ""),
+    }
+    context = get_finance_context(filters)
     return render_template("dashboard.html", active_page="dashboard", **context)
 @app.route("/budgets")
 @login_required
@@ -326,6 +375,55 @@ def goals():
 def investments():
     context = get_finance_context()
     return render_template("investments.html", active_page="investments", **context)
+@app.route("/reports")
+@login_required
+def reports():
+    selected_month = request.args.get("month") or date.today().strftime("%Y-%m")
+    context = get_finance_context()
+    cursor.execute(
+        """
+        SELECT COALESCE(SUM(CASE WHEN type='income' THEN amount ELSE 0 END), 0) AS income,
+               COALESCE(SUM(CASE WHEN type='expense' THEN amount ELSE 0 END), 0) AS expense,
+               COUNT(*) AS transaction_count
+        FROM transactions
+        WHERE substr(date, 1, 7)=?
+        """,
+        (selected_month,),
+    )
+    report_totals = dict(cursor.fetchone())
+    report_totals["savings"] = report_totals["income"] - report_totals["expense"]
+    report_totals["savings_rate"] = round((report_totals["savings"] / report_totals["income"]) * 100, 1) if report_totals["income"] > 0 else 0
+    cursor.execute(
+        """
+        SELECT category, SUM(amount) AS total
+        FROM transactions
+        WHERE type='expense' AND substr(date, 1, 7)=?
+        GROUP BY category
+        ORDER BY total DESC
+        """,
+        (selected_month,),
+    )
+    category_report = [dict(row) for row in cursor.fetchall()]
+    cursor.execute(
+        """
+        SELECT date, description, category, type, amount
+        FROM transactions
+        WHERE substr(date, 1, 7)=?
+        ORDER BY date DESC, id DESC
+        LIMIT 10
+        """,
+        (selected_month,),
+    )
+    report_transactions = cursor.fetchall()
+    context.update(
+        {
+            "selected_month": selected_month,
+            "report_totals": report_totals,
+            "category_report": category_report,
+            "report_transactions": report_transactions,
+        }
+    )
+    return render_template("reports.html", active_page="reports", **context)
 @app.route("/add-transaction", methods=["POST"])
 @login_required
 def add_transaction():
@@ -397,6 +495,64 @@ def add_investment():
     )
     db.commit()
     return redirect(url_for("investments"))
+@app.route("/edit/<string:entity>/<int:item_id>", methods=["GET", "POST"])
+@login_required
+def edit_item(entity, item_id):
+    table_config = {
+        "transaction": {
+            "table": "transactions",
+            "redirect": "dashboard",
+            "fields": ["date", "description", "category", "amount", "type"],
+            "update": "date=?, description=?, category=?, amount=?, type=?",
+        },
+        "budget": {
+            "table": "budgets",
+            "redirect": "budgets",
+            "fields": ["name", "monthly_limit"],
+            "update": "name=?, monthly_limit=?",
+        },
+        "bill": {
+            "table": "bills",
+            "redirect": "bills",
+            "fields": ["title", "amount", "due_date", "status"],
+            "update": "title=?, amount=?, due_date=?, status=?",
+        },
+        "goal": {
+            "table": "goals",
+            "redirect": "goals",
+            "fields": ["name", "target_amount", "current_amount"],
+            "update": "name=?, target_amount=?, current_amount=?",
+        },
+        "investment": {
+            "table": "investments",
+            "redirect": "investments",
+            "fields": ["name", "asset_type", "current_value", "cost_basis"],
+            "update": "name=?, asset_type=?, current_value=?, cost_basis=?",
+        },
+    }
+    config = table_config.get(entity)
+    if not config:
+        return redirect(url_for("dashboard"))
+
+    cursor.execute(f"SELECT * FROM {config['table']} WHERE id=?", (item_id,))
+    item = cursor.fetchone()
+    if not item:
+        return redirect(url_for(config["redirect"]))
+
+    if request.method == "POST":
+        values = []
+        for field in config["fields"]:
+            value = request.form.get(field, "").strip()
+            if field in {"amount", "monthly_limit", "target_amount", "current_amount", "current_value", "cost_basis"}:
+                value = parse_amount(value)
+            values.append(value)
+        values.append(item_id)
+        cursor.execute(f"UPDATE {config['table']} SET {config['update']} WHERE id=?", values)
+        db.commit()
+        return redirect(url_for(config["redirect"]))
+
+    context = get_finance_context()
+    return render_template("edit.html", active_page=config["redirect"], entity=entity, item=item, **context)
 @app.route("/delete/<string:entity>/<int:item_id>")
 @login_required
 def delete_item(entity, item_id):
