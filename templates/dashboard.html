@@ -1,249 +1,238 @@
-{% extends "base.html" %}
+{% extends "_app_shell.html" %}
 {% block title %}Dashboard | Finance Tracker{% endblock %}
-{% block body %}
-<main class="app-layout">
-    <aside class="sidebar">
-        <div>
-            <p class="brand-mark">FINFLOW</p>
-            <p class="sidebar-subtitle">Finance control center</p>
-        </div>
-        <nav class="sidebar-nav">
-            {% for item in navigation %}
-            <a href="{{ url_for(item.endpoint) }}" class="nav-link {% if active_page == item.endpoint %}active{% endif %}">{{ item.label }}</a>
-            {% endfor %}
-        </nav>
-        <section class="sidebar-card">
-            <p class="sidebar-card-label">Cash Reserve</p>
-            <strong>Rs {{ "%.2f"|format(cash_reserve) }}</strong>
-            <p>Built from current savings and ready for short-term needs.</p>
-        </section>
-    </aside>
-    <section class="content-shell">
-        <header class="page-header">
+{% block page_eyebrow %}Dashboard Overview{% endblock %}
+{% block page_heading %}Finance Tracker{% endblock %}
+{% block page_description %}A clean command center for cash flow, budgets, bills, goals, investments, and reports.{% endblock %}
+{% block sidebar_card %}
+<p class="sidebar-card-label">Cash Reserve</p>
+<strong>Rs {{ "%.2f"|format(cash_reserve) }}</strong>
+<p>Available savings for short-term needs.</p>
+{% endblock %}
+{% block page_actions %}
+<span class="badge badge-soft">On Track</span>
+<span class="badge badge-dark">{{ current_month_label }}</span>
+<a class="btn btn-ghost" href="{{ url_for('logout') }}">Log out</a>
+{% endblock %}
+{% block content %}
+<section class="metric-grid">
+    <article class="metric-card">
+        <span class="metric-icon metric-green">NW</span>
+        <p>Net Worth</p>
+        <h2>Rs {{ "%.2f"|format(net_worth) }}</h2>
+        <small>Cash plus current investment value</small>
+    </article>
+    <article class="metric-card">
+        <span class="metric-icon metric-blue">IN</span>
+        <p>Total Income</p>
+        <h2>Rs {{ "%.2f"|format(total_income) }}</h2>
+        <small>All recorded income entries</small>
+    </article>
+    <article class="metric-card">
+        <span class="metric-icon metric-orange">EX</span>
+        <p>Total Expense</p>
+        <h2>Rs {{ "%.2f"|format(total_expense) }}</h2>
+        <small>Tracked outgoing payments</small>
+    </article>
+    <article class="metric-card metric-card-dark">
+        <span class="metric-icon metric-light">BU</span>
+        <p>Budget Used</p>
+        <h2>Rs {{ "%.2f"|format(monthly_budget_used) }}</h2>
+        <small>Across Rs {{ "%.2f"|format(monthly_budget_total) }} planned budgets</small>
+    </article>
+</section>
+
+<section class="dashboard-grid">
+    <article class="panel panel-large">
+        <div class="panel-header">
             <div>
-                <p class="eyebrow">Dashboard Overview</p>
-                <h1>Finance Tracker</h1>
-                <p class="page-copy">A premium view of your cash flow, budgets, bills, goals, and investments.</p>
+                <h2>Cash Flow Trend</h2>
+                <p>Income, expenses, and savings over time.</p>
             </div>
-            <div class="header-actions">
-                <span class="badge badge-soft">On Track</span>
-                <span class="badge badge-dark">{{ current_month_label }}</span>
-                <a class="btn btn-ghost" href="{{ url_for('logout') }}">Log out</a>
+        </div>
+        <canvas id="financeTrendChart"></canvas>
+    </article>
+
+    <article class="panel">
+        <div class="panel-header">
+            <div>
+                <h2>Spending Summary</h2>
+                <p>Your top expense categories this month.</p>
             </div>
-        </header>
-        <section class="hero-grid">
-            <article class="metric-card">
-                <p>Net Worth</p>
-                <h2>Rs {{ "%.2f"|format(net_worth) }}</h2>
-                <span>Cash plus current investment value</span>
-            </article>
-            <article class="metric-card">
-                <p>Total Income</p>
-                <h2>Rs {{ "%.2f"|format(total_income) }}</h2>
-                <span>All recorded income entries</span>
-            </article>
-            <article class="metric-card">
-                <p>Total Expense</p>
-                <h2>Rs {{ "%.2f"|format(total_expense) }}</h2>
-                <span>Tracked outgoing payments</span>
-            </article>
-            <article class="metric-card metric-card-dark">
-                <p>Budget Used This Month</p>
-                <h2>Rs {{ "%.2f"|format(monthly_budget_used) }}</h2>
-                <span>Across Rs {{ "%.2f"|format(monthly_budget_total) }} planned budgets</span>
-            </article>
-        </section>
-        <section class="dashboard-grid">
-            <article class="panel panel-large">
-                <div class="panel-header">
-                    <div>
-                        <h2>Cash Flow Trend</h2>
-                        <p>Income, expenses, and savings over time.</p>
-                    </div>
-                </div>
-                <canvas id="financeTrendChart"></canvas>
-            </article>
-            <article class="panel">
-                <div class="panel-header">
-                    <div>
-                        <h2>Spending Summary</h2>
-                        <p>Your top expense categories this month.</p>
-                    </div>
-                </div>
-                <div class="summary-list">
-                    {% for item in spending_summary %}
-                    <div class="summary-row">
-                        <span>{{ item.category or "Other" }}</span>
-                        <strong>Rs {{ "%.2f"|format(item.total or 0) }}</strong>
-                    </div>
+        </div>
+        <div class="summary-list">
+            {% for item in spending_summary %}
+            <div class="summary-row">
+                <span>{{ item.category or "Other" }}</span>
+                <strong>Rs {{ "%.2f"|format(item.total or 0) }}</strong>
+            </div>
+            {% else %}
+            <p class="empty-state">Add expense transactions to unlock category summaries.</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="panel panel-wide">
+        <div class="panel-header">
+            <div>
+                <h2>Add Transaction</h2>
+                <p>Descriptions help auto-categorize entries when needed.</p>
+            </div>
+        </div>
+        <form method="POST" action="{{ url_for('add_transaction') }}" class="finance-form finance-form-wide">
+            <label>
+                <span>Date</span>
+                <input type="date" name="date" value="{{ today }}" required>
+            </label>
+            <label>
+                <span>Description</span>
+                <input type="text" name="description" placeholder="Rent, salary, supermarket, SIP" required>
+            </label>
+            <label>
+                <span>Category</span>
+                <select name="category">
+                    <option>Other</option>
+                    <option>Housing</option>
+                    <option>Groceries</option>
+                    <option>Transport</option>
+                    <option>Entertainment</option>
+                    <option>Utilities</option>
+                    <option>Healthcare</option>
+                    <option>Dining</option>
+                    <option>Travel</option>
+                    <option>Investments</option>
+                    <option>Salary</option>
+                </select>
+            </label>
+            <label>
+                <span>Amount</span>
+                <input type="number" step="0.01" name="amount" placeholder="0.00" required>
+            </label>
+            <label>
+                <span>Type</span>
+                <select name="type">
+                    <option value="expense">Expense</option>
+                    <option value="income">Income</option>
+                </select>
+            </label>
+            <button type="submit" class="btn btn-primary">Save Transaction</button>
+        </form>
+    </article>
+
+    <article class="panel panel-wide">
+        <div class="panel-header">
+            <div>
+                <h2>Find Transactions</h2>
+                <p>Filter your ledger by text, category, type, or date range.</p>
+            </div>
+            <a class="table-action table-action-muted" href="{{ url_for('dashboard') }}">Clear filters</a>
+        </div>
+        <form method="GET" action="{{ url_for('dashboard') }}" class="finance-form finance-form-filters">
+            <label>
+                <span>Search</span>
+                <input type="search" name="search" value="{{ filters.search }}" placeholder="Description or category">
+            </label>
+            <label>
+                <span>Category</span>
+                <select name="category">
+                    <option value="">All categories</option>
+                    {% for category in transaction_categories %}
+                    <option value="{{ category }}" {% if filters.category == category %}selected{% endif %}>{{ category }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>
+                <span>Type</span>
+                <select name="type">
+                    <option value="">All types</option>
+                    <option value="income" {% if filters.type == "income" %}selected{% endif %}>Income</option>
+                    <option value="expense" {% if filters.type == "expense" %}selected{% endif %}>Expense</option>
+                </select>
+            </label>
+            <label>
+                <span>From</span>
+                <input type="date" name="start_date" value="{{ filters.start_date }}">
+            </label>
+            <label>
+                <span>To</span>
+                <input type="date" name="end_date" value="{{ filters.end_date }}">
+            </label>
+            <button type="submit" class="btn btn-primary">Apply Filters</button>
+        </form>
+    </article>
+
+    <article class="panel panel-wide">
+        <div class="panel-header">
+            <div>
+                <h2>Recent Transactions</h2>
+                <p>Searchable transaction history with quick edit controls.</p>
+            </div>
+        </div>
+        <div class="table-wrap">
+            <table class="styled-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th>Category</th>
+                        <th>Type</th>
+                        <th>Amount</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transaction in transactions[:8] %}
+                    <tr>
+                        <td>{{ transaction.date }}</td>
+                        <td>{{ transaction.description or "-" }}</td>
+                        <td><span class="tag">{{ transaction.category or "Other" }}</span></td>
+                        <td class="{{ 'text-income' if transaction.type == 'income' else 'text-expense' }}">{{ transaction.type|capitalize }}</td>
+                        <td>Rs {{ "%.2f"|format(transaction.amount or 0) }}</td>
+                        <td>
+                            <a class="table-action table-action-muted" href="{{ url_for('edit_item', entity='transaction', item_id=transaction.id) }}">Edit</a>
+                            <a class="table-action" href="{{ url_for('delete_item', entity='transaction', item_id=transaction.id) }}">Delete</a>
+                        </td>
+                    </tr>
                     {% else %}
-                    <p class="empty-state">Add a few expense transactions to unlock category summaries.</p>
+                    <tr>
+                        <td colspan="6" class="empty-cell">No transactions yet.</td>
+                    </tr>
                     {% endfor %}
-                </div>
-            </article>
-            <article class="panel panel-wide">
-                <div class="panel-header">
-                    <div>
-                        <h2>Add Transaction</h2>
-                        <p>Descriptions are used to auto-categorize entries when needed.</p>
-                    </div>
-                </div>
-                <form method="POST" action="{{ url_for('add_transaction') }}" class="finance-form finance-form-wide">
-                    <label>
-                        <span>Date</span>
-                        <input type="date" name="date" value="{{ today }}" required>
-                    </label>
-                    <label>
-                        <span>Description</span>
-                        <input type="text" name="description" placeholder="Rent, salary, supermarket, SIP, internet bill" required>
-                    </label>
-                    <label>
-                        <span>Category</span>
-                        <select name="category">
-                            <option>Other</option>
-                            <option>Housing</option>
-                            <option>Groceries</option>
-                            <option>Transport</option>
-                            <option>Entertainment</option>
-                            <option>Utilities</option>
-                            <option>Healthcare</option>
-                            <option>Dining</option>
-                            <option>Travel</option>
-                            <option>Investments</option>
-                            <option>Salary</option>
-                        </select>
-                    </label>
-                    <label>
-                        <span>Amount</span>
-                        <input type="number" step="0.01" name="amount" placeholder="0.00" required>
-                    </label>
-                    <label>
-                        <span>Type</span>
-                        <select name="type">
-                            <option value="expense">Expense</option>
-                            <option value="income">Income</option>
-                        </select>
-                    </label>
-                    <button type="submit" class="btn btn-primary">Save Transaction</button>
-                </form>
-            </article>
+                </tbody>
+            </table>
+        </div>
+    </article>
 
-            <article class="panel panel-wide">
-                <div class="panel-header">
-                    <div>
-                        <h2>Find Transactions</h2>
-                        <p>Filter your ledger by text, category, type, or date range.</p>
-                    </div>
-                    <a class="table-action table-action-muted" href="{{ url_for('dashboard') }}">Clear filters</a>
-                </div>
-                <form method="GET" action="{{ url_for('dashboard') }}" class="finance-form finance-form-filters">
-                    <label>
-                        <span>Search</span>
-                        <input type="search" name="search" value="{{ filters.search }}" placeholder="Description or category">
-                    </label>
-                    <label>
-                        <span>Category</span>
-                        <select name="category">
-                            <option value="">All categories</option>
-                            {% for category in transaction_categories %}
-                            <option value="{{ category }}" {% if filters.category == category %}selected{% endif %}>{{ category }}</option>
-                            {% endfor %}
-                        </select>
-                    </label>
-                    <label>
-                        <span>Type</span>
-                        <select name="type">
-                            <option value="">All types</option>
-                            <option value="income" {% if filters.type == "income" %}selected{% endif %}>Income</option>
-                            <option value="expense" {% if filters.type == "expense" %}selected{% endif %}>Expense</option>
-                        </select>
-                    </label>
-                    <label>
-                        <span>From</span>
-                        <input type="date" name="start_date" value="{{ filters.start_date }}">
-                    </label>
-                    <label>
-                        <span>To</span>
-                        <input type="date" name="end_date" value="{{ filters.end_date }}">
-                    </label>
-                    <button type="submit" class="btn btn-primary">Apply Filters</button>
-                </form>
-            </article>
+    <article class="panel">
+        <div class="panel-header">
+            <div>
+                <h2>Alerts</h2>
+                <p>Important signals based on current activity.</p>
+            </div>
+        </div>
+        <div class="insight-list">
+            {% for alert in alerts %}
+            <div class="insight-item insight-alert">{{ alert }}</div>
+            {% else %}
+            <div class="insight-item">No critical alerts right now.</div>
+            {% endfor %}
+        </div>
+    </article>
 
-            <article class="panel panel-wide">
-                <div class="panel-header">
-                    <div>
-                        <h2>Recent Transactions</h2>
-                        <p>Smarter categorization with searchable transaction history.</p>
-                    </div>
-                </div>
-                <div class="table-wrap">
-                    <table class="styled-table">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Description</th>
-                                <th>Category</th>
-                                <th>Type</th>
-                                <th>Amount</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for transaction in transactions[:8] %}
-                            <tr>
-                                <td>{{ transaction.date }}</td>
-                                <td>{{ transaction.description or "-" }}</td>
-                                <td><span class="tag">{{ transaction.category or "Other" }}</span></td>
-                                <td class="{{ 'text-income' if transaction.type == 'income' else 'text-expense' }}">{{ transaction.type|capitalize }}</td>
-                                <td>Rs {{ "%.2f"|format(transaction.amount or 0) }}</td>
-                                <td>
-                                    <a class="table-action table-action-muted" href="{{ url_for('edit_item', entity='transaction', item_id=transaction.id) }}">Edit</a>
-                                    <a class="table-action" href="{{ url_for('delete_item', entity='transaction', item_id=transaction.id) }}">Delete</a>
-                                </td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="6" class="empty-cell">No transactions yet.</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </article>
+    <article class="panel">
+        <div class="panel-header">
+            <div>
+                <h2>Recommendations</h2>
+                <p>Ideas from your spending behavior.</p>
+            </div>
+        </div>
+        <div class="insight-list">
+            {% for recommendation in recommendations %}
+            <div class="insight-item">{{ recommendation }}</div>
+            {% endfor %}
+        </div>
+    </article>
+</section>
 
-            <article class="panel">
-                <div class="panel-header">
-                    <div>
-                        <h2>Alerts</h2>
-                        <p>Important signals based on current activity.</p>
-                    </div>
-                </div>
-                <div class="insight-list">
-                    {% for alert in alerts %}
-                    <div class="insight-item insight-alert">{{ alert }}</div>
-                    {% else %}
-                    <div class="insight-item">No critical alerts right now.</div>
-                    {% endfor %}
-                </div>
-            </article>
-
-            <article class="panel">
-                <div class="panel-header">
-                    <div>
-                        <h2>Recommendations</h2>
-                        <p>Personalized ideas from your spending behavior.</p>
-                    </div>
-                </div>
-                <div class="insight-list">
-                    {% for recommendation in recommendations %}
-                    <div class="insight-item">{{ recommendation }}</div>
-                    {% endfor %}
-                </div>
-            </article>
-        </section>
-    </section>
-</main>
 <script>
     const monthlySavings = {{ monthly_savings|tojson }};
     const trendContext = document.getElementById("financeTrendChart");
