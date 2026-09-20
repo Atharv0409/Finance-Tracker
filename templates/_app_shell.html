@@ -1,1 +1,47 @@
+{% extends "base.html" %}
 
+{% block body %}
+<main class="app-layout">
+    <aside class="sidebar">
+        <div>
+            <a class="brand-lockup" href="{{ url_for('dashboard') }}">
+                <span class="brand-icon">F</span>
+                <span>
+                    <strong>FINFLOW</strong>
+                    <small>Finance control center</small>
+                </span>
+            </a>
+
+            <nav class="sidebar-nav" aria-label="Main navigation">
+                {% for item in navigation %}
+                <a href="{{ url_for(item.endpoint) }}" class="nav-link {% if active_page == item.endpoint %}active{% endif %}">
+                    <span class="nav-dot">{{ item.label[:1] }}</span>
+                    <span>{{ item.label }}</span>
+                </a>
+                {% endfor %}
+            </nav>
+        </div>
+
+        <section class="sidebar-card">
+            {% block sidebar_card %}{% endblock %}
+        </section>
+    </aside>
+
+    <section class="content-shell">
+        <header class="topbar">
+            <div>
+                <p class="eyebrow">{% block page_eyebrow %}{% endblock %}</p>
+                <h1>{% block page_heading %}{% endblock %}</h1>
+                <p class="page-copy">{% block page_description %}{% endblock %}</p>
+            </div>
+            <div class="header-actions">
+                {% block page_actions %}
+                <a class="btn btn-ghost" href="{{ url_for('logout') }}">Log out</a>
+                {% endblock %}
+            </div>
+        </header>
+
+        {% block content %}{% endblock %}
+    </section>
+</main>
+{% endblock %}
