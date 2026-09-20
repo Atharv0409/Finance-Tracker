@@ -1,12 +1,14 @@
 {% extends "base.html" %}
+
 {% block title %}Finance Tracker Login{% endblock %}
 {% block body_class %}home{% endblock %}
+
 {% block body %}
 <main class="auth-shell">
     <section class="auth-hero">
-        <p class="eyebrow">Finance Tracker</p>
-        <h1>See your money with more calm and more clarity.</h1>
-        <p class="hero-copy">Track spending, manage goals, plan bills, and review your financial health from one focused dashboard.</p>
+        <p class="eyebrow">FinFlow Finance Tracker</p>
+        <h1>See your money with calm, clarity, and control.</h1>
+        <p class="hero-copy">Track spending, budgets, bills, goals, investments, and monthly reports from one focused dashboard.</p>
         <div class="hero-stat-grid">
             <article class="hero-stat">
                 <span>Budgets</span>
@@ -22,13 +24,16 @@
             </article>
         </div>
     </section>
+
     <section class="auth-panel">
         <p class="panel-kicker">Welcome back</p>
         <h2>Unlock your finance dashboard</h2>
         <p class="panel-copy">Use your credentials to access transactions, budgets, bills, goals, and investments.</p>
+
         {% if error %}
         <p class="error-message">{{ error }}</p>
         {% endif %}
+
         <form method="POST" action="{{ url_for('login') }}" class="login-form">
             <label>
                 <span>Username</span>
